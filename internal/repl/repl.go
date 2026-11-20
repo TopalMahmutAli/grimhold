@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TopalMahmutAli/grimhold/internal/game"
 	"github.com/TopalMahmutAli/grimhold/internal/open5e"
 	"github.com/TopalMahmutAli/grimhold/internal/world"
 )
@@ -30,6 +31,8 @@ func Start() {
 	fmt.Printf("Loaded %d regions\n", len(w.Regions))
 
 	currentRegionID := w.Start
+	player := game.NewCharacter()
+	hasRested := false
 
 	var currentPage open5e.MonsterPage
 	pageNumber := 0
@@ -92,6 +95,7 @@ func Start() {
 						for _, destination := range w.Regions {
 							if destination.ID == destinationID {
 								currentRegionID = destination.ID
+								hasRested = false
 
 								fmt.Println("You travel to", destination.Name)
 								fmt.Println(destination.Description)
@@ -288,6 +292,50 @@ func Start() {
 					fmt.Println("  ", action.Description)
 				}
 			}
+
+			return nil
+		},
+	}
+
+	commands["character"] = cliCommand{
+		name:        "character",
+		description: "Show your character sheet",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("character does not accept arguments")
+			}
+
+			fmt.Println("Character Sheet")
+			fmt.Printf("HP: %d/%d\n", player.HP, player.MaxHP)
+			fmt.Printf("Level: %d\n", player.Level)
+			fmt.Printf("XP: %d\n", player.XP)
+			fmt.Printf("Attack Bonus: %+d\n", player.AttackBonus)
+			fmt.Printf("Weapon: %s\n", player.Weapon)
+
+			return nil
+		},
+	}
+
+	commands["rest"] = cliCommand{
+		name:        "rest",
+		description: "Restore your health once per region visit",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("rest does not accept arguments")
+			}
+
+			if hasRested {
+				return fmt.Errorf("you have already rested in this region")
+			}
+
+			// Restaurer les points de vie
+			player.HP = player.MaxHP
+
+			// Marquer le repos comme utilisé
+			hasRested = true
+
+			fmt.Println("You rest and recover your HP.")
+			fmt.Printf("HP: %d/%d\n", player.HP, player.MaxHP)
 
 			return nil
 		},
