@@ -34,3 +34,32 @@ func FetchMonsters(url string) (MonsterPage, error) {
 	}
 	return page, nil
 }
+
+func FetchMonster(slug string) (Monster, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	url := MonstersURL + slug + "/"
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return Monster{}, fmt.Errorf("fetch monster: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return Monster{}, fmt.Errorf(
+			"monster not found or API error: HTTP %d",
+			resp.StatusCode,
+		)
+	}
+
+	var monster Monster
+
+	if err := json.NewDecoder(resp.Body).Decode(&monster); err != nil {
+		return Monster{}, fmt.Errorf("decode monster: %w", err)
+	}
+
+	return monster, nil
+}

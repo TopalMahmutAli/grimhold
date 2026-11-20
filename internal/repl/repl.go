@@ -250,6 +250,49 @@ func Start() {
 		},
 	}
 
+	commands["inspect"] = cliCommand{
+		name:        "inspect",
+		description: "Show a monster's statistics",
+		callback: func(args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("usage: inspect <monster>")
+			}
+
+			// Récupérer le monstre depuis Open5e
+			monster, err := open5e.FetchMonster(args[0])
+			if err != nil {
+				return fmt.Errorf("inspect monster: %w", err)
+			}
+
+			// Afficher les caractéristiques
+			fmt.Println("Name:", monster.Name)
+			fmt.Println("Hit Points:", monster.HitPoints)
+			fmt.Println("Armor Class:", monster.ArmorClass)
+			fmt.Println("Challenge Rating:", monster.ChallengeRating)
+
+			fmt.Println("Actions:")
+
+			for _, action := range monster.Actions {
+				fmt.Println(" -", action.Name)
+
+				if action.DamageDice != "" {
+					fmt.Printf(
+						"   Attack: %+d | Damage: %s%+d\n",
+						action.AttackBonus,
+						action.DamageDice,
+						action.DamageBonus,
+					)
+				}
+
+				if action.Description != "" {
+					fmt.Println("  ", action.Description)
+				}
+			}
+
+			return nil
+		},
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
