@@ -1,0 +1,54 @@
+
+{
+  "start": "crossroads",
+  "regions": [
+    {
+      "id": "crossroads",
+      "name": "The Crossroads",
+      "description": "Ancient roads meet beneath a dead oak tree.",
+      "danger": 0,
+      "foes": [],
+      "exits": ["ashen-marsh", "whispering-forest"]
+    },
+    {
+      "id": "ashen-marsh",
+      "name": "Ashen Marsh",
+      "description": "Fog, iron, and things that breathe under the water.",
+      "danger": 1,
+      "foes": ["goblin", "skeleton", "ghoul"],
+      "exits": ["crossroads", "drowned-chapel"]
+    },
+    {
+      "id": "whispering-forest",
+      "name": "Whispering Forest",
+      "description": "The trees whisper names of those who never returned.",
+      "danger": 1,
+      "foes": ["goblin", "wolf"],
+      "exits": ["crossroads", "forgotten-crypt"]
+    },
+    {
+      "id": "drowned-chapel",
+      "name": "Drowned Chapel",
+      "description": "Broken bells echo beneath the black water.",
+      "danger": 2,
+      "foes": ["skeleton", "ghoul", "zombie"],
+      "exits": ["ashen-marsh", "cursed-citadel"]
+    },
+    {
+      "id": "forgotten-crypt",
+      "name": "Forgotten Crypt",
+      "description": "Cold stone corridors hide the restless dead.",
+      "danger": 2,
+      "foes": ["skeleton", "zombie", "ghoul"],
+      "exits": ["whispering-forest", "cursed-citadel"]
+    },
+    {
+      "id": "cursed-citadel",
+      "name": "Cursed Citadel",
+      "description": "A ruined fortress where an ancient evil waits.",
+      "danger": 3,
+      "foes": ["ghoul", "wight", "ogre"],
+      "exits": ["drowned-chapel", "forgotten-crypt"]
+    }
+  ]
+}
