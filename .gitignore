@@ -1,0 +1,13 @@
+# Exécutables
+/grimhold
+*.exe
+*.test
+
+# Sauvegardes du jeu
+save.json
+
+# Fichiers macOS
+.DS_Store
+
+# Configuration locale
+.env
