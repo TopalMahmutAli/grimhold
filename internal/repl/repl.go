@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TopalMahmutAli/grimhold/internal/open5e"
 	"github.com/TopalMahmutAli/grimhold/internal/world"
 )
 
@@ -149,6 +150,27 @@ func Start() {
 				}
 			}
 			return fmt.Errorf("current region not found: %s", currentRegionID)
+		},
+	}
+
+	commands["bestiary"] = cliCommand{
+		name:        "bestiary",
+		description: "List monsters from Open5e",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("bestiary does not accept arguments")
+			}
+
+			page, err := open5e.FetchMonsters()
+			if err != nil {
+				return fmt.Errorf("load bestiary: %w", err)
+			}
+
+			for _, monster := range page.Results {
+				fmt.Println(monster.Name)
+			}
+
+			return nil
 		},
 	}
 
