@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-const monstersURL = "https://api.open5e.com/v1/monsters/"
+const MonstersURL = "https://api.open5e.com/v1/monsters/"
 
-func FetchMonsters() (MonsterPage, error) {
+func FetchMonsters(url string) (MonsterPage, error) {
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get(monstersURL)
+	resp, err := client.Get(url)
 	if err != nil {
 		return MonsterPage{}, fmt.Errorf("fetch monsters: %w", err)
 	}

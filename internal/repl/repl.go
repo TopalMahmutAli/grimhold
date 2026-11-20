@@ -31,6 +31,9 @@ func Start() {
 
 	currentRegionID := w.Start
 
+	var currentPage open5e.MonsterPage
+	pageNumber := 0
+
 	commands := make(map[string]cliCommand)
 
 	commands["help"] = cliCommand{
@@ -161,12 +164,85 @@ func Start() {
 				return fmt.Errorf("bestiary does not accept arguments")
 			}
 
-			page, err := open5e.FetchMonsters()
+			page, err := open5e.FetchMonsters(open5e.MonstersURL)
 			if err != nil {
 				return fmt.Errorf("load bestiary: %w", err)
 			}
 
-			for _, monster := range page.Results {
+			currentPage = page
+			pageNumber = 1
+
+			fmt.Println("Monsters - Page 1:")
+
+			for _, monster := range currentPage.Results {
+				fmt.Println(monster.Name)
+			}
+
+			return nil
+		},
+	}
+
+	commands["next"] = cliCommand{
+		name:        "next",
+		description: "Show the next page of monsters",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("next does not accept arguments")
+			}
+
+			if pageNumber == 0 {
+				return fmt.Errorf("use bestiary first")
+			}
+
+			if currentPage.Next == nil {
+				return fmt.Errorf("no more pages")
+			}
+
+			page, err := open5e.FetchMonsters(*currentPage.Next)
+			if err != nil {
+				return fmt.Errorf("load next page: %w", err)
+			}
+
+			currentPage = page
+			pageNumber++
+
+			fmt.Printf("Monsters - Page %d:\n", pageNumber)
+
+			for _, monster := range currentPage.Results {
+				fmt.Println(monster.Name)
+			}
+
+			return nil
+		},
+	}
+
+	commands["prev"] = cliCommand{
+		name:        "prev",
+		description: "Show the previous page of monsters",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("prev does not accept arguments")
+			}
+
+			if pageNumber == 0 {
+				return fmt.Errorf("use bestiary first")
+			}
+
+			if currentPage.Previous == nil {
+				return fmt.Errorf("no previous page")
+			}
+
+			page, err := open5e.FetchMonsters(*currentPage.Previous)
+			if err != nil {
+				return fmt.Errorf("load previous page: %w", err)
+			}
+
+			currentPage = page
+			pageNumber--
+
+			fmt.Printf("Monsters - Page %d:\n", pageNumber)
+
+			for _, monster := range currentPage.Results {
 				fmt.Println(monster.Name)
 			}
 
