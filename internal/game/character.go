@@ -6,7 +6,9 @@ type Character struct {
 	Level       int
 	XP          int
 	AttackBonus int
+	ArmorClass  int
 	Weapon      string
+	Gold        int
 }
 
 func NewCharacter() Character {
@@ -16,6 +18,8 @@ func NewCharacter() Character {
 		Level:       1,
 		XP:          0,
 		AttackBonus: 3,
+		ArmorClass:  13,
 		Weapon:      "Rusty Sword",
+		Gold:        0,
 	}
 }
