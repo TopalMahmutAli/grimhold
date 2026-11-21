@@ -2,9 +2,11 @@ package repl
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -17,51 +19,6 @@ type cliCommand struct {
 	name        string
 	description string
 	callback    func(args []string) error
-}
-
-func monsterAttack(monster *open5e.Monster, player *game.Character) error {
-	attackName := "Basic Attack"
-	attackBonus := 2
-	damageDice := "1d4"
-	damageBonus := 0
-
-	for _, action := range monster.Actions {
-		if action.DamageDice != "" {
-			attackName = action.Name
-			attackBonus = action.AttackBonus
-			damageDice = action.DamageDice
-			damageBonus = action.DamageBonus
-			break
-		}
-	}
-
-	fmt.Printf("\n%s attacks with %s!\n", monster.Name, attackName)
-
-	roll := game.RollD20()
-
-	fmt.Printf("%s rolls: %d + %d = %d\n",
-		monster.Name, roll, attackBonus, roll+attackBonus)
-
-	if !game.AttackHits(roll, attackBonus, player.ArmorClass) {
-		fmt.Printf("%s misses!\n", monster.Name)
-		return nil
-	}
-
-	damage, err := game.RollDamageDice(damageDice, damageBonus)
-	if err != nil {
-		return fmt.Errorf("monster damage: %w", err)
-	}
-
-	player.HP -= damage
-
-	if player.HP < 0 {
-		player.HP = 0
-	}
-
-	fmt.Printf("%s hits you for %d damage!\n", monster.Name, damage)
-	fmt.Printf("Your HP: %d/%d\n", player.HP, player.MaxHP)
-
-	return nil
 }
 
 func Start() {
@@ -151,35 +108,31 @@ func Start() {
 
 			destinationID := args[0]
 
-			for _, region := range w.Regions {
-				if region.ID != currentRegionID {
-					continue
-				}
+			region, found := w.FindRegion(currentRegionID)
+			if !found {
+				return fmt.Errorf("current region not found: %s", currentRegionID)
+			}
 
-				for _, exit := range region.Exits {
-					if exit == destinationID {
-
-						for _, destination := range w.Regions {
-							if destination.ID == destinationID {
-								currentRegionID = destination.ID
-								hasRested = false
-
-								fmt.Println("You travel to", destination.Name)
-								fmt.Println(destination.Description)
-
-								return nil
-							}
-						}
-						return fmt.Errorf("region not found: %s", destinationID)
-					}
-				}
+			if !slices.Contains(region.Exits, destinationID) {
 				return fmt.Errorf(
 					"cannot travel to %s from %s",
 					destinationID,
 					region.Name,
 				)
 			}
-			return fmt.Errorf("current region not found: %s", currentRegionID)
+
+			destination, found := w.FindRegion(destinationID)
+			if !found {
+				return fmt.Errorf("region not found: %s", destinationID)
+			}
+
+			currentRegionID = destination.ID
+			hasRested = false
+
+			fmt.Println("You travel to", destination.Name)
+			fmt.Println(destination.Description)
+
+			return nil
 		},
 	}
 
@@ -213,17 +166,17 @@ func Start() {
 				return fmt.Errorf("look does not accept arguments")
 			}
 
-			for _, region := range w.Regions {
-				if region.ID == currentRegionID {
-					fmt.Println("Region:", region.Name)
-					fmt.Println("Description:", region.Description)
-					fmt.Println("Danger:", region.Danger)
-					fmt.Println("Exits:", strings.Join(region.Exits, ", "))
-					return nil
-
-				}
+			region, found := w.FindRegion(currentRegionID)
+			if !found {
+				return fmt.Errorf("current region not found: %s", currentRegionID)
 			}
-			return fmt.Errorf("current region not found: %s", currentRegionID)
+
+			fmt.Println("Region:", region.Name)
+			fmt.Println("Description:", region.Description)
+			fmt.Println("Danger:", region.Danger)
+			fmt.Println("Exits:", strings.Join(region.Exits, ", "))
+
+			return nil
 		},
 	}
 
@@ -421,42 +374,31 @@ func Start() {
 				return fmt.Errorf("you are already facing an enemy")
 			}
 
-			for _, region := range w.Regions {
-				if region.ID != currentRegionID {
-					continue
-				}
+			region, found := w.FindRegion(currentRegionID)
+			if !found {
+				return fmt.Errorf("current region not found: %s", currentRegionID)
+			}
 
-				if len(region.Foes) == 0 {
-					fmt.Println("You explore the area, but find no enemies.")
-					return nil
-				}
-
-				index := rand.IntN(len(region.Foes))
-				monsterSlug := region.Foes[index]
-
-				monster, err := open5e.FetchMonster(monsterSlug)
-				if err != nil {
-					return fmt.Errorf(
-						"fetch encounter monster %s: %w",
-						monsterSlug,
-						err,
-					)
-				}
-
-				// Mémoriser le monstre rencontré
-				currentEncounter = &monster
-
-				fmt.Printf("A wild %s appears!\n", currentEncounter.Name)
-				fmt.Printf("HP: %d\n", currentEncounter.HitPoints)
-				fmt.Printf("Armor Class: %d\n", currentEncounter.ArmorClass)
-
+			if len(region.Foes) == 0 {
+				fmt.Println("You explore the area, but find no enemies.")
 				return nil
 			}
 
-			return fmt.Errorf(
-				"current region not found: %s",
-				currentRegionID,
-			)
+			index := rand.IntN(len(region.Foes))
+			monsterSlug := region.Foes[index]
+
+			monster, err := open5e.FetchMonster(monsterSlug)
+			if err != nil {
+				return fmt.Errorf("fetch encounter monster %s: %w", monsterSlug, err)
+			}
+
+			currentEncounter = &monster
+
+			fmt.Printf("A wild %s appears!\n", currentEncounter.Name)
+			fmt.Printf("HP: %d\n", currentEncounter.HitPoints)
+			fmt.Printf("Armor Class: %d\n", currentEncounter.ArmorClass)
+
+			return nil
 		},
 	}
 
@@ -517,7 +459,7 @@ func Start() {
 			} else {
 				fmt.Println("Your attack misses!")
 			}
-			if err := monsterAttack(currentEncounter, &player); err != nil {
+			if err := game.MonsterAttack(currentEncounter, &player); err != nil {
 				return fmt.Errorf("enemy counter attack: %w", err)
 			}
 
@@ -554,7 +496,7 @@ func Start() {
 
 			fmt.Println("Escape failed! The enemy gets a free attack.")
 
-			if err := monsterAttack(currentEncounter, &player); err != nil {
+			if err := game.MonsterAttack(currentEncounter, &player); err != nil {
 				return fmt.Errorf("enemy free attack: %w", err)
 			}
 
@@ -566,7 +508,7 @@ func Start() {
 
 	commands["slain"] = cliCommand{
 		name:        "slain bestiary",
-		description: "Show monster you have defeated",
+		description: "Show monsters you have defeated",
 		callback: func(args []string) error {
 			if len(args) != 1 || args[0] != "bestiary" {
 				return fmt.Errorf("usage: slain bestiary")
@@ -586,6 +528,66 @@ func Start() {
 			for _, name := range names {
 				fmt.Printf("%s: %d kills\n", name, slain[name])
 			}
+			return nil
+		},
+	}
+
+	commands["save"] = cliCommand{
+		name:        "save",
+		description: "Save your current game",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("save does not accept arguments")
+			}
+			if currentEncounter != nil {
+				return fmt.Errorf("you cannot save during combat")
+			}
+			state := game.SaveState{
+				Location:  currentRegionID,
+				Character: player,
+				Slain:     slain,
+				HasRested: hasRested,
+			}
+			if err := game.Save("save.json", state); err != nil {
+				return fmt.Errorf("save game: %w", err)
+			}
+			fmt.Println("Game saved successfully !")
+
+			return nil
+		},
+	}
+
+	commands["load"] = cliCommand{
+		name:        "load",
+		description: "Load your saved game",
+		callback: func(args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("load does not accept arguments")
+			}
+
+			if currentEncounter != nil {
+				return fmt.Errorf("you cannot load during combat")
+			}
+
+			state, err := game.Load("save.json")
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					fmt.Println("No saved game found.")
+					return nil
+				}
+				return fmt.Errorf("load game %w", err)
+			}
+			if _, found := w.FindRegion(state.Location); !found {
+				return fmt.Errorf("invalid region in save: %s", state.Location)
+			}
+			currentRegionID = state.Location
+			player = state.Character
+			slain = state.Slain
+			hasRested = state.HasRested
+			currentEncounter = nil
+
+			fmt.Println("Game loaded successfully !")
+
 			return nil
 		},
 	}

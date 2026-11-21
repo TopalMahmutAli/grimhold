@@ -34,3 +34,13 @@ func Load(path string) (World, error) {
 	}
 	return w, nil
 }
+
+func (w World) FindRegion(id string) (Region, bool) {
+	for _, region := range w.Regions {
+		if region.ID == id {
+			return region, true
+		}
+	}
+
+	return Region{}, false
+}
